@@ -1,7 +1,7 @@
 /* global angular */
 
 /**
- * nbLazyBootstrap - Bootstrapping angular project with lazy loading support
+ * Bootstrapping angular project with lazy loading support
  * 
  * @param {Object} angular
  * @returns {void}
