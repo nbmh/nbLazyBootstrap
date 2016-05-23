@@ -1,0 +1,30 @@
+{
+  "name": "nblazybootstrap",
+  "version": "0.0.3",
+  "description": "Bootstrapping angular project with lazy loading support",
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/halas/nblazybootstrap.git"
+  },
+  "keywords": [
+    "angular",
+    "bootstrap",
+    "lazy load",
+    "modules"
+  ],
+  "author": "Michał Hałas <info@michalhalas.pl>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/halas/nblazybootstrap/issues"
+  },
+  "homepage": "https://gitlab.com/halas/nblazybootstrap#README",
+  "dependencies": {
+    "angular": "^1.5.5",
+    "oclazyload": "^1.0.9"
+  },
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-uglify": "^1.0.1",
+    "grunt-stripcomments": "^0.5.0"
+  }
+}
