@@ -107,10 +107,6 @@
         return nextLevel;
       },
       requires = angular.copy(options.requires);
-      
-      if (requires.indexOf('ionic') == -1) {
-        requires.push('ionic');
-      }
 
       angular.forEach(angular.nbLazyBootstrap.modules, function(config) {
         var moduleName = config.name.toLowerCase();
