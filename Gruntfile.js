@@ -4,6 +4,7 @@
 
 module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
+  grunt.loadNpmTasks('grunt-contrib-copy');
 
   grunt.initConfig({
     uglify: {
@@ -20,10 +21,18 @@ module.exports = function(grunt) {
           ]
         }
       }
+    },
+    copy: {
+      src: {
+        files: [{
+          src: 'src/nbLazyBootstrap.js',
+          dest: 'dist/nbLazyBootstrap.js'
+        }]
+      }
     }
   });
     
   grunt.registerTask('dist', function () {
-    grunt.task.run(['uglify:src']);
+    grunt.task.run(['uglify:src', 'copy:src']);
   });
 };
