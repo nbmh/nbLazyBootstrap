@@ -41,6 +41,9 @@
     var options = angular.extend({
       name: 'app',
       requires: [],
+      directive: [],
+      service: [],
+      filter: [],
       vendor: [],
       external: [],
       config: false,
@@ -63,6 +66,18 @@
         vendors: 'vendor'
       }
     }, opt),
+    toCamelCase = function(str) {
+      return str.toLowerCase().replace(/-(.)/g, function(match, group1) {
+        return group1.toUpperCase();
+      });
+    },
+    getLibraryFromObject = function(object) {
+      var key = Object.keys(object)[0];
+      return {
+        name: toCamelCase(key),
+        module: object[key].toLowerCase()
+      };
+    },
     run = function() {
 
       options.requires.unshift('oc.lazyLoad');
@@ -77,20 +92,41 @@
       },
       toLoadCopy = function(moduleDirectory, toLoad, config) {
         var nextLevel = angular.copy(toLoad);
-        
+        console.log(config);
         if (config.directive != undefined && config.directive.length) {
           angular.forEach(config.directive, function(name) {
-            nextLevel.push(moduleDirectory + options.directories.directives + '/' + name + '.js');
+            var path, lib;
+            if (angular.isObject(name)) {
+              lib = getLibraryFromObject(name);
+              path = options.directories.modules + '/' + lib.module + '/' + options.directories.directives + '/' + lib.name + '.js';
+            } else {
+              path = moduleDirectory + '/' + options.directories.directives + '/' + toCamelCase(name) + '.js';
+            }
+            nextLevel.push(path);
           });
         }
         if (config.service != undefined && config.service.length) {
           angular.forEach(config.service, function(name) {
-            nextLevel.push(moduleDirectory + options.directories.services + '/' + name + '.js');
+            var path, lib;
+            if (angular.isObject(name)) {
+              lib = getLibraryFromObject(name);
+              path = options.directories.modules + '/' + lib.module + '/' + options.directories.services + '/' + lib.name + '.js';
+            } else {
+              path = moduleDirectory + '/' + options.directories.services + '/' + toCamelCase(name) + '.js';
+            }
+            nextLevel.push(path);
           });
         }
         if (config.filter != undefined && config.filter.length) {
           angular.forEach(config.filter, function(name) {
-            nextLevel.push(moduleDirectory + options.directories.filters + '/' + name + '.js');
+            var path, lib;
+            if (angular.isObject(name)) {
+              lib = getLibraryFromObject(name);
+              path = options.directories.modules + '/' + lib.module + '/' + options.directories.filters + '/' + lib.name + '.js';
+            } else {
+              path = moduleDirectory + '/' + options.directories.filters + '/' + toCamelCase(name) + '.js';
+            }
+            nextLevel.push(path);
           });
         }
         if (config.vendor != undefined && config.vendor.length) {
@@ -120,6 +156,42 @@
         }
       });
 
+      if (options.directive != undefined && options.directive.length) {
+        angular.forEach(options.directive, function(name) {
+          var path, lib;
+          if (angular.isObject(name)) {
+            lib = getLibraryFromObject(name);
+            path = options.directories.modules + '/' + lib.module + '/' + options.directories.directives + '/' + lib.name + '.js';
+          } else {
+            path = options.directories.vendors + '/' + options.directories.directives + '/' + toCamelCase(name) + '.js';
+          }
+          toLoad.push(path);
+        });
+      }
+      if (options.service != undefined && options.service.length) {
+        angular.forEach(options.service, function(name) {
+          var path, lib;
+          if (angular.isObject(name)) {
+            lib = getLibraryFromObject(name);
+            path = options.directories.modules + '/' + lib.module + '/' + options.directories.services + '/' + lib.name + '.js';
+          } else {
+            path = options.directories.vendors + '/' + options.directories.services + '/' + toCamelCase(name) + '.js';
+          }
+          toLoad.push(path);
+        });
+      }
+      if (options.filter != undefined && options.filter.length) {
+        angular.forEach(options.filter, function(name) {
+          var path, lib;
+          if (angular.isObject(name)) {
+            lib = getLibraryFromObject(name);
+            path = options.directories.modules + '/' + lib.module + '/' + options.directories.filters + '/' + lib.name + '.js';
+          } else {
+            path = options.directories.vendors + '/' + options.directories.filters + '/' + toCamelCase(name) + '.js';
+          }
+          toLoad.push(path);
+        });
+      }
       if (options.vendor != undefined && options.vendor.length) {
         angular.forEach(options.vendor, function(filepath) {
           toLoad.push(options.directories.vendors + '/' + filepath);
