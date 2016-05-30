@@ -92,7 +92,7 @@
       },
       toLoadCopy = function(moduleDirectory, toLoad, config) {
         var nextLevel = angular.copy(toLoad);
-        console.log(config);
+        
         if (config.directive != undefined && config.directive.length) {
           angular.forEach(config.directive, function(name) {
             var path, lib;
