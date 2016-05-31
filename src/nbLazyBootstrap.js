@@ -39,7 +39,7 @@
     }
 
     var options = angular.extend({
-      name: 'app',
+      name: 'bootstrap',
       requires: [],
       directive: [],
       service: [],
@@ -47,7 +47,7 @@
       vendor: [],
       external: [],
       config: false,
-      complete: false,
+      run: false,
       lazy: {
         cache: true,
         timeout: 60000,
@@ -85,6 +85,7 @@
       angular.nbLazyBootstrap.options = options;
 
       var appModule, 
+      appNavigation = [],
       appModules = [],
       toLoad = [],
       toLoadConfig = function(baseConfig, config) {
@@ -204,22 +205,42 @@
       }
 
       appModule = angular.module(options.name, requires);
+      
       appModule.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
         var otherwiseSet = false;
         angular.forEach(angular.nbLazyBootstrap.modules, function(config) {
-          if (config.navigation != undefined) {
+          if (config.navigation != undefined && angular.isArray(config.navigation)) {
+            appNavigation = angular.merge(appNavigation, config.navigation);
+          }
+          if (config.state != undefined) {
             var moduleName = config.name.toLowerCase(),
             moduleDirectory = options.directories.modules + '/' + moduleName + '/',
             toLoadModule = toLoadCopy(moduleDirectory, toLoad, config),
             toLoadConfigModule = toLoadConfig(options.lazy, config.lazy || {});
             
-            if (config.navigation.states != undefined) {
-              angular.forEach(config.navigation.states, function(stateParams, stateName) {
-                var controllerName = stateParams.controller.toLowerCase(),
+            $stateProvider.state(options.name, {
+              url: '',
+              abstract: true,
+              templateUrl: options.directories.modules + '/' + options.name + '.html',
+              resolve: {
+                loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
+                  return $ocLazyLoad.load(toLoadModule, toLoadConfigModule);
+                }]
+              }
+            });
+            
+            if (config.state != undefined) {
+              angular.forEach(config.state, function(stateParams, stateName) {
+                if (stateName == 'otherwise') {
+                  return;
+                }
+                var controllerName = toCamelCase(stateParams.controller),
                 toLoadState = toLoadCopy(moduleDirectory, toLoadModule, stateParams),
                 toLoadConfigState = toLoadConfig(toLoadConfigModule, stateParams.lazy || {}),
                 newStateParams = {
                   url: stateParams.url,
+                  abstract: stateParams['abstract'] === true,
+                  onEnter: stateParams['onEnter'] !== undefined,
                   controller: moduleName + '.' + controllerName,
                   templateUrl: options.directories.modules + '/' + moduleName + '/' + options.directories.views + '/' + controllerName + '.html',
                   resolve: {
@@ -233,11 +254,9 @@
                 $stateProvider.state(stateName, newStateParams);
               });
             }
-            if (!otherwiseSet) {
+            if (!otherwiseSet && config.otherwise != undefined) {
               otherwiseSet = true;
-              if (config.navigation.otherwise != undefined) {
-                $urlRouterProvider.otherwise(config.navigation.otherwise);
-              }
+              $urlRouterProvider.otherwise(config.otherwise);
             }
           }
         });
@@ -246,13 +265,42 @@
           $urlRouterProvider.otherwise('/');
         }
       }]);
+      appModule.provider('$navigation', [function() {
+        var $provider = this,
+        
+        items = appNavigation;
+        
+        $provider.set = function(nodes) {
+          items = nodes;
+        };
+        
+        $provider.prepend = function(node) {
+          items.push(node);
+        };
+        
+        $provider.append = function(node) {
+          items.push(node);
+        };
+        
+        $provider.add = function(node) {
+          $provider.append(node);
+        };
+
+        $provider.$get = [function() {
+          var nav = {
+            items: items
+          };
+          
+          return nav;
+        }];
+      }]);
 
       if (options.config != undefined && options.config !== false) {
         appModule.config(options.config);
       }
       
-      if (typeof options.complete == 'function') {
-        options.complete.call(options, appModule, appModules);
+      if (options.run != undefined && options.run !== false) {
+        appModule.run(options.run);
       }
       
       return appModule;
