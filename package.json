@@ -1,6 +1,6 @@
 {
   "name": "nblazybootstrap",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Bootstrapping angular project with lazy loading support",
   "repository": {
     "type": "git",
