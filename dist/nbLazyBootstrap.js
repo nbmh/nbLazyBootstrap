@@ -9,303 +9,366 @@
 (function(angular) {
   'use strict';
   
-  if (angular.nbLazyBootstrap == undefined) {
-    angular.nbLazyBootstrap = {};
-    angular.nbLazyBootstrap.modules = [];
-    angular.nbLazyBootstrap.module = {};
-    angular.nbLazyBootstrap.options = {};
-  }
-
-  angular.nbLazyBootstrap.module = function(name, config) {
-    if (config != undefined) {
-      angular.nbLazyBootstrap.modules.push(angular.extend(config, {name: name.toLowerCase()}));
-      return null;
-    } else {
-      return angular.module(name.toLowerCase());
+  var options = {
+    name: 'app',
+    modules: [],
+    directive: [],
+    service: [],
+    filter: [],
+    vendor: [],
+    external: [],
+    lazy: {
+      cache: true,
+      timeout: 60000,
+      reconfig: false,
+      rerun: false,
+      serie: false,
+      insertBefore: undefined
+    },
+    directory: {
+      modules: 'module',
+      controllers: 'controller',
+      directives: 'directive',
+      components: 'component',
+      services: 'service',
+      filters: 'filter',
+      views: 'view',
+      vendors: 'vendor'
     }
-  };
-
-  angular.nbLazyBootstrap.root = function() {
-    return angular.module(angular.nbLazyBootstrap.run('name'));
-  };
-
-  angular.nbLazyBootstrap.run = function(opt) {
-
-    if (opt != undefined && typeof opt == 'string') {
-      switch (opt) {
-        case 'name': return angular.nbLazyBootstrap.options.name;
-        default: throw 'Unkwnown nbLazyBootstrap command';
+  },
+  promises = [],
+  modules = {
+    names: [],
+    configs: []
+  },
+  callbacks = {
+    loading: angular.noop,
+    error: angular.noop,
+    done: angular.noop,
+    config: angular.noop
+  },
+  lib = {
+    toArray: function(arr) {
+      if (!arr) {
+        return [];
       }
-    }
-
-    var options = angular.extend({
-      name: 'bootstrap',
-      requires: [],
-      directive: [],
-      service: [],
-      filter: [],
-      vendor: [],
-      external: [],
-      config: false,
-      run: false,
-      lazy: {
-        cache: true,
-        timeout: 60000,
-        reconfig: false,
-        rerun: false,
-        serie: false,
-        insertBefore: undefined
-      },
-      directories: {
-        modules: 'module',
-        controllers: 'controller',
-        directives: 'directive',
-        services: 'service',
-        filters: 'filter',
-        views: 'view',
-        vendors: 'vendor'
-      }
-    }, opt),
-    toCamelCase = function(str) {
+      return angular.isArray(arr) ? arr : [arr];
+    },
+    bootstrap: function(app) {
+      angular.element(document).ready(function () {
+        angular.bootstrap(document, [app.name]);
+      });
+    },
+    injector: function(modules) {
+      var modulesList = ['ng'];
+      return angular.injector(modulesList);
+    },
+    toCamelCase: function(str) {
       return str.toLowerCase().replace(/-(.)/g, function(match, group1) {
         return group1.toUpperCase();
       });
-    },
-    getLibraryFromObject = function(object) {
-      var key = Object.keys(object)[0];
-      return {
-        name: toCamelCase(key),
-        module: object[key].toLowerCase()
-      };
-    },
-    run = function() {
-
-      options.requires.unshift('oc.lazyLoad');
-
-      angular.nbLazyBootstrap.options = options;
-
-      var appModule, 
-      appNavigation = [],
-      appModules = [],
-      toLoad = [],
-      toLoadConfig = function(baseConfig, config) {
-        return angular.merge(angular.copy(baseConfig), config);
+    }
+  };
+  
+  angular.lazy = function(opt) {
+    
+    options = angular.merge(options, opt || {});
+    
+    if (options.modules.indexOf('oc.lazyLoad') == -1) {
+      options.modules.unshift('oc.lazyLoad');
+    }
+    
+    var $injector = lib.injector(options.modules),
+    $q = $injector.get('$q'),
+    $timeout = $injector.get('$timeout');
+    
+    return {
+      module: function(name, config) {
+        if (config != undefined) {
+          var moduleName = name.toLowerCase();
+          if (modules.names.indexOf(moduleName) == -1) {
+            modules.names.push(moduleName);
+            modules.configs.push(angular.extend(config, {name: moduleName}));
+          }
+          return this;
+        } else {
+          return angular.module(name.toLowerCase());
+        }
       },
-      toLoadCopy = function(moduleDirectory, toLoad, config) {
-        var nextLevel = angular.copy(toLoad);
-        
-        if (config.directive != undefined && config.directive.length) {
-          angular.forEach(config.directive, function(name) {
-            var path, lib;
-            if (angular.isObject(name)) {
-              lib = getLibraryFromObject(name);
-              path = options.directories.modules + '/' + lib.module + '/' + options.directories.directives + '/' + lib.name + '.js';
-            } else {
-              path = moduleDirectory + '/' + options.directories.directives + '/' + toCamelCase(name) + '.js';
-            }
-            nextLevel.push(path);
-          });
-        }
-        if (config.service != undefined && config.service.length) {
-          angular.forEach(config.service, function(name) {
-            var path, lib;
-            if (angular.isObject(name)) {
-              lib = getLibraryFromObject(name);
-              path = options.directories.modules + '/' + lib.module + '/' + options.directories.services + '/' + lib.name + '.js';
-            } else {
-              path = moduleDirectory + '/' + options.directories.services + '/' + toCamelCase(name) + '.js';
-            }
-            nextLevel.push(path);
-          });
-        }
-        if (config.filter != undefined && config.filter.length) {
-          angular.forEach(config.filter, function(name) {
-            var path, lib;
-            if (angular.isObject(name)) {
-              lib = getLibraryFromObject(name);
-              path = options.directories.modules + '/' + lib.module + '/' + options.directories.filters + '/' + lib.name + '.js';
-            } else {
-              path = moduleDirectory + '/' + options.directories.filters + '/' + toCamelCase(name) + '.js';
-            }
-            nextLevel.push(path);
-          });
-        }
-        if (config.vendor != undefined && config.vendor.length) {
-          angular.forEach(config.vendor, function(filepath) {
-            nextLevel.push(options.directories.vendors + '/' + filepath);
-          });
-        }
-        if (config.external != undefined && config.external.length) {
-          angular.forEach(config.external, function(filepath) {
-            nextLevel.push(filepath);
-          });
-        }
-        
-        return nextLevel;
+      resolve: function(promise) {
+        promise = $q.when($injector.instantiate(promise));
+        promises.push(promise);
+        return this;
       },
-      requires = angular.copy(options.requires);
+      loading: function(callback) {
+        callbacks.loading = callback;
+        return this;
+      },
+      error: function(callback) {
+        callbacks.error = callback;
+        return this;
+      },
+      done: function(callback) {
+        callbacks.done = callback;
+        return this;
+      },
+      config: function(callback) {
+        callbacks.config = callback;
+        return this;
+      },
+      bootstrap: function(callback) {
+        callbacks.loading();
 
-      angular.forEach(angular.nbLazyBootstrap.modules, function(config) {
-        var moduleName = config.name.toLowerCase();
-        if (requires.indexOf(moduleName) == -1) {
-          var module = angular.module(moduleName, config.requires || []);
-          if (config.config != undefined && config.config !== false) {
-            module.config(config.config);
-          }
-          appModules.push(module);
-          requires.push(moduleName);
-        }
-      });
+        var appModule, appConfig, 
+        appModules = [],
+        moduleConfig = [],
+        toLoad = [],
+        toLoadConfig = function(baseConfig, config) {
+          return angular.merge(angular.copy(baseConfig), config);
+        },
+        toLoadCopy = function(moduleDirectory, toLoad, config) {
+          var nextLevel = angular.copy(toLoad);
 
-      if (options.directive != undefined && options.directive.length) {
-        angular.forEach(options.directive, function(name) {
-          var path, lib;
-          if (angular.isObject(name)) {
-            lib = getLibraryFromObject(name);
-            path = options.directories.modules + '/' + lib.module + '/' + options.directories.directives + '/' + lib.name + '.js';
-          } else {
-            path = options.directories.vendors + '/' + options.directories.directives + '/' + toCamelCase(name) + '.js';
-          }
-          toLoad.push(path);
-        });
-      }
-      if (options.service != undefined && options.service.length) {
-        angular.forEach(options.service, function(name) {
-          var path, lib;
-          if (angular.isObject(name)) {
-            lib = getLibraryFromObject(name);
-            path = options.directories.modules + '/' + lib.module + '/' + options.directories.services + '/' + lib.name + '.js';
-          } else {
-            path = options.directories.vendors + '/' + options.directories.services + '/' + toCamelCase(name) + '.js';
-          }
-          toLoad.push(path);
-        });
-      }
-      if (options.filter != undefined && options.filter.length) {
-        angular.forEach(options.filter, function(name) {
-          var path, lib;
-          if (angular.isObject(name)) {
-            lib = getLibraryFromObject(name);
-            path = options.directories.modules + '/' + lib.module + '/' + options.directories.filters + '/' + lib.name + '.js';
-          } else {
-            path = options.directories.vendors + '/' + options.directories.filters + '/' + toCamelCase(name) + '.js';
-          }
-          toLoad.push(path);
-        });
-      }
-      if (options.vendor != undefined && options.vendor.length) {
-        angular.forEach(options.vendor, function(filepath) {
-          toLoad.push(options.directories.vendors + '/' + filepath);
-        });
-      }
-      if (options.external != undefined && options.external.length) {
-        angular.forEach(options.external, function(filepath) {
-          toLoad.push(filepath);
-        });
-      }
-
-      appModule = angular.module(options.name, requires);
-      
-      appModule.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
-        var otherwiseSet = false;
-        angular.forEach(angular.nbLazyBootstrap.modules, function(config) {
-          if (config.navigation != undefined && angular.isArray(config.navigation)) {
-            appNavigation = angular.merge(appNavigation, config.navigation);
-          }
-          if (config.state != undefined) {
-            var moduleName = config.name.toLowerCase(),
-            moduleDirectory = options.directories.modules + '/' + moduleName + '/',
-            toLoadModule = toLoadCopy(moduleDirectory, toLoad, config),
-            toLoadConfigModule = toLoadConfig(options.lazy, config.lazy || {});
-            
-            $stateProvider.state(options.name, {
-              url: '',
-              abstract: true,
-              templateUrl: options.directories.modules + '/' + options.name + '.html',
-              resolve: {
-                loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
-                  return $ocLazyLoad.load(toLoadModule, toLoadConfigModule);
-                }]
+          if (config.component != undefined && config.component.length) {
+            angular.forEach(config.component, function(name) {
+              var path;
+              if (angular.isObject(name)) {
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.components + '/' + lib.toCamelCase(name.name) + '.js';
+              } else {
+                path = moduleDirectory + '/' + options.directory.components + '/' + lib.toCamelCase(name) + '.js';
               }
+              nextLevel.push(path);
             });
-            
-            if (config.state != undefined) {
-              angular.forEach(config.state, function(stateParams, stateName) {
-                if (stateName == 'otherwise') {
-                  return;
-                }
-                var controllerName = toCamelCase(stateParams.controller),
-                toLoadState = toLoadCopy(moduleDirectory, toLoadModule, stateParams),
-                toLoadConfigState = toLoadConfig(toLoadConfigModule, stateParams.lazy || {}),
-                newStateParams = {
-                  url: stateParams.url,
-                  abstract: stateParams['abstract'] === true,
-                  onEnter: stateParams['onEnter'] !== undefined,
-                  controller: moduleName + '.' + controllerName,
-                  templateUrl: options.directories.modules + '/' + moduleName + '/' + options.directories.views + '/' + controllerName + '.html',
-                  resolve: {
-                    loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
-                      var toLoad = angular.copy(toLoadState);
-                      toLoad.unshift(moduleDirectory + options.directories.controllers + '/' + controllerName + '.js');
-                      return $ocLazyLoad.load(toLoad, toLoadConfigState);
-                    }]
-                  }
-                };
-                $stateProvider.state(stateName, newStateParams);
-              });
+          }
+          if (config.directive != undefined && config.directive.length) {
+            angular.forEach(config.directive, function(name) {
+              var path;
+              if (angular.isObject(name)) {
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.directives + '/' + lib.toCamelCase(name.name) + '.js';
+              } else {
+                path = moduleDirectory + '/' + options.directory.directives + '/' + lib.toCamelCase(name) + '.js';
+              }
+              nextLevel.push(path);
+            });
+          }
+          if (config.service != undefined && config.service.length) {
+            angular.forEach(config.service, function(name) {
+              var path;
+              if (angular.isObject(name)) {
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.services + '/' + lib.toCamelCase(name.name) + '.js';
+              } else {
+                path = moduleDirectory + '/' + options.directory.services + '/' + lib.toCamelCase(name) + '.js';
+              }
+              nextLevel.push(path);
+            });
+          }
+          if (config.filter != undefined && config.filter.length) {
+            angular.forEach(config.filter, function(name) {
+              var path;
+              if (angular.isObject(name)) {
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.filters + '/' + lib.toCamelCase(name.name) + '.js';
+              } else {
+                path = moduleDirectory + '/' + options.directory.filters + '/' + lib.toCamelCase(name) + '.js';
+              }
+              nextLevel.push(path);
+            });
+          }
+          if (config.vendor != undefined && config.vendor.length) {
+            angular.forEach(config.vendor, function(filepath) {
+              nextLevel.push(options.directory.vendors + '/' + filepath);
+            });
+          }
+          if (config.external != undefined && config.external.length) {
+            angular.forEach(config.external, function(filepath) {
+              nextLevel.push(filepath);
+            });
+          }
+
+          return nextLevel;
+        },
+        dependencies = angular.copy(options.modules);
+
+        angular.forEach(modules.configs, function(config) {
+          var moduleName = config.name.toLowerCase();
+          if (dependencies.indexOf(moduleName) == -1) {
+            var module = angular.module(moduleName, config.modules || []);
+            if (config.config != undefined && config.config !== false) {
+              module.config(config.config);
+              appModules.push(module);
             }
-            if (!otherwiseSet && config.otherwise != undefined) {
-              otherwiseSet = true;
-              $urlRouterProvider.otherwise(config.otherwise);
-            }
+            dependencies.push(moduleName);
           }
         });
 
-        if (!otherwiseSet) {
-          $urlRouterProvider.otherwise('/');
+        if (options.component != undefined && options.component.length) {
+          angular.forEach(options.component, function(name) {
+            var path;
+            if (angular.isObject(name)) {
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.components + '/' + lib.toCamelCase(name.name) + '.js';
+            } else {
+              path = options.directory.vendors + '/' + options.directory.components + '/' + lib.toCamelCase(name) + '.js';
+            }
+            toLoad.push(path);
+          });
         }
-      }]);
-      appModule.provider('$navigation', [function() {
-        var $provider = this,
+        if (options.directive != undefined && options.directive.length) {
+          angular.forEach(options.directive, function(name) {
+            var path;
+            if (angular.isObject(name)) {
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.directives + '/' + lib.toCamelCase(name.name) + '.js';
+            } else {
+              path = options.directory.vendors + '/' + options.directory.directives + '/' + lib.toCamelCase(name) + '.js';
+            }
+            toLoad.push(path);
+          });
+        }
+        if (options.service != undefined && options.service.length) {
+          angular.forEach(options.service, function(name) {
+            var path;
+            if (angular.isObject(name)) {
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.services + '/' + lib.toCamelCase(name.name) + '.js';
+            } else {
+              path = options.directory.vendors + '/' + options.directory.services + '/' + lib.toCamelCase(name) + '.js';
+            }
+            toLoad.push(path);
+          });
+        }
+        if (options.filter != undefined && options.filter.length) {
+          angular.forEach(options.filter, function(name) {
+            var path;
+            if (angular.isObject(name)) {
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.filters + '/' + lib.toCamelCase(name.name) + '.js';
+            } else {
+              path = options.directory.vendors + '/' + options.directory.filters + '/' + lib.toCamelCase(name) + '.js';
+            }
+            toLoad.push(path);
+          });
+        }
+        if (options.vendor != undefined && options.vendor.length) {
+          angular.forEach(options.vendor, function(filepath) {
+            toLoad.push(options.directory.vendors + '/' + filepath);
+          });
+        }
+        if (options.external != undefined && options.external.length) {
+          angular.forEach(options.external, function(filepath) {
+            toLoad.push(filepath);
+          });
+        }
         
-        items = appNavigation;
-        
-        $provider.set = function(nodes) {
-          items = nodes;
-        };
-        
-        $provider.prepend = function(node) {
-          items.push(node);
-        };
-        
-        $provider.append = function(node) {
-          items.push(node);
-        };
-        
-        $provider.add = function(node) {
-          $provider.append(node);
-        };
+        appModule = angular.module(options.name, dependencies);
+      
+        appConfig = ['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
+          var otherwiseSet = false,
+          $rootElement = angular.element(document);
+          angular.forEach(modules.configs, function(config) {
+            moduleConfig = angular.merge(moduleConfig, config);
+            if (config.state != undefined) {
+              var moduleName = config.name.toLowerCase(),
+              moduleDirectory = options.directory.modules + '/' + moduleName + '/',
+              toLoadModule = toLoadCopy(moduleDirectory, toLoad, config),
+              toLoadConfigModule = toLoadConfig(options.lazy, config.lazy || {});
 
-        $provider.$get = [function() {
-          var nav = {
-            items: items
-          };
-          
-          return nav;
+              if (config.state != undefined) {
+                angular.forEach(config.state, function(stateParams, stateName) {
+                  if (stateName == 'otherwise') {
+                    return;
+                  }
+                  var controllerName = lib.toCamelCase(stateParams.controller),
+                  templateUrl = options.directory.modules + '/' + moduleName + '/' + options.directory.views + '/' + controllerName + '.html';
+                  
+                  if (stateParams.layout) {
+                    var tmpUrl = templateUrl;
+                    templateUrl = function() {
+                      if (this.layout != undefined) {
+                        var templateName = $rootElement.injector().invoke(this.layout);
+                        if (templateName != undefined && templateName != '') {
+                          return this.options.directory.modules + '/' + this.moduleName + '/' + this.options.directory.views + '/' + this.controllerName + '/' + templateName + '.html';
+                        } else {
+                          return this.templateUrl;
+                        }
+                      } else {
+                        return this.templateUrl;
+                      }
+                    }.bind({
+                      layout: stateParams.layout,
+                      options: options,
+                      moduleName: moduleName,
+                      controllerName: controllerName,
+                      templateUrl: tmpUrl
+                    });
+                  }
+                  
+                  var toLoadState = toLoadCopy(moduleDirectory, toLoadModule, stateParams),
+                  toLoadConfigState = toLoadConfig(toLoadConfigModule, stateParams.lazy || {}),
+                  newStateParams = {
+                    url: stateParams.url,
+                    abstract: stateParams['abstract'] === true,
+                    onEnter: stateParams['onEnter'] !== undefined,
+                    controller: moduleName + '.' + controllerName,
+                    templateUrl: templateUrl,
+                    resolve: {
+                      loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
+                        var toLoad = angular.copy(toLoadState);
+                        toLoad.unshift(moduleDirectory + options.directory.controllers + '/' + controllerName + '.js');
+                        return $ocLazyLoad.load(toLoad, toLoadConfigState);
+                      }]
+                    }
+                  };
+                  $stateProvider.state(stateName, newStateParams);
+                });
+              }
+              if (!otherwiseSet && config.otherwise != undefined) {
+                otherwiseSet = true;
+                $urlRouterProvider.otherwise(config.otherwise);
+              }
+            }
+          });
+
+          if (!otherwiseSet) {
+            $urlRouterProvider.otherwise('/');
+          }
         }];
-      }]);
+        appModule.provider('$lazy', [function() {
+          var $provider = this;
 
-      if (options.config != undefined && options.config !== false) {
-        appModule.config(options.config);
+          $provider.modules = function(nodes) {
+            return appModules;
+          };
+
+          $provider.config = function(node) {
+            return moduleConfig;
+          };
+
+          $provider.state = function(node) {
+            return moduleConfig.state;
+          };
+
+          $provider.$get = [function() {
+            return {
+              modules: function() {
+                return $provider.modules();
+              },
+              config: function() {
+                return $provider.config();
+              },
+              state: function() {
+                return $provider.state();
+              }
+            };
+          }];
+        }]);
+
+        return $q.all(promises)
+        .then(function () {
+          $timeout(function() {
+            appModule.config(appConfig);
+            appModule.config(callbacks.config);
+            callback(appModule);
+            lib.bootstrap(appModule, callback || angular.noop);
+          }, 0);
+        }, callbacks.error)
+        .finally(callbacks.done);
       }
-      
-      if (options.run != undefined && options.run !== false) {
-        appModule.run(options.run);
-      }
-      
-      return appModule;
     };
-
-    return run();
   };
 })(angular);
