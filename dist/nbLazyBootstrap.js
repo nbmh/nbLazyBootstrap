@@ -45,7 +45,8 @@
     loading: angular.noop,
     error: angular.noop,
     done: angular.noop,
-    config: angular.noop
+    config: angular.noop,
+    run: angular.noop
   },
   lib = {
     toArray: function(arr) {
@@ -114,6 +115,10 @@
       },
       config: function(callback) {
         callbacks.config = callback;
+        return this;
+      },
+      run: function(callback) {
+        callbacks.run = callback;
         return this;
       },
       bootstrap: function(callback) {
@@ -363,8 +368,9 @@
           $timeout(function() {
             appModule.config(appConfig);
             appModule.config(callbacks.config);
-            callback(appModule);
-            lib.bootstrap(appModule, callback || angular.noop);
+            appModule.run((callbacks.run || angular.noop));
+            (callback || angular.noop)(appModule);
+            lib.bootstrap(appModule);
           }, 0);
         }, callbacks.error)
         .finally(callbacks.done);
