@@ -308,7 +308,8 @@
                   newStateParams = {
                     url: stateParams.url,
                     abstract: stateParams['abstract'] === true,
-                    onEnter: stateParams['onEnter'] !== undefined,
+                    onEnter: stateParams['onEnter'] || angular.noop,
+                    onExit: stateParams['onExit'] || angular.noop,
                     controller: moduleName + '.' + controllerName,
                     templateUrl: templateUrl,
                     resolve: {
