@@ -17,6 +17,7 @@
     filter: [],
     vendor: [],
     external: [],
+    version: '',
     lazy: {
       cache: true,
       timeout: 60000,
@@ -63,6 +64,9 @@
     injector: function(modules) {
       var modulesList = ['ng'];
       return angular.injector(modulesList);
+    },
+    getVersionPrefix: function() {
+      return options.version != '' ? '?_=' + options.version : '';
     },
     toCamelCase: function(str) {
       return str.toLowerCase().replace(/-(.)/g, function(match, group1) {
@@ -138,9 +142,9 @@
             angular.forEach(config.component, function(name) {
               var path;
               if (angular.isObject(name)) {
-                path = options.directory.modules + '/' + name.module + '/' + options.directory.components + '/' + lib.toCamelCase(name.name) + '.js';
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.components + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
               } else {
-                path = moduleDirectory + '/' + options.directory.components + '/' + lib.toCamelCase(name) + '.js';
+                path = moduleDirectory + '/' + options.directory.components + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
               }
               nextLevel.push(path);
             });
@@ -149,9 +153,9 @@
             angular.forEach(config.directive, function(name) {
               var path;
               if (angular.isObject(name)) {
-                path = options.directory.modules + '/' + name.module + '/' + options.directory.directives + '/' + lib.toCamelCase(name.name) + '.js';
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.directives + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
               } else {
-                path = moduleDirectory + '/' + options.directory.directives + '/' + lib.toCamelCase(name) + '.js';
+                path = moduleDirectory + '/' + options.directory.directives + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
               }
               nextLevel.push(path);
             });
@@ -160,9 +164,9 @@
             angular.forEach(config.service, function(name) {
               var path;
               if (angular.isObject(name)) {
-                path = options.directory.modules + '/' + name.module + '/' + options.directory.services + '/' + lib.toCamelCase(name.name) + '.js';
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.services + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
               } else {
-                path = moduleDirectory + '/' + options.directory.services + '/' + lib.toCamelCase(name) + '.js';
+                path = moduleDirectory + '/' + options.directory.services + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
               }
               nextLevel.push(path);
             });
@@ -171,9 +175,9 @@
             angular.forEach(config.filter, function(name) {
               var path;
               if (angular.isObject(name)) {
-                path = options.directory.modules + '/' + name.module + '/' + options.directory.filters + '/' + lib.toCamelCase(name.name) + '.js';
+                path = options.directory.modules + '/' + name.module + '/' + options.directory.filters + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
               } else {
-                path = moduleDirectory + '/' + options.directory.filters + '/' + lib.toCamelCase(name) + '.js';
+                path = moduleDirectory + '/' + options.directory.filters + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
               }
               nextLevel.push(path);
             });
@@ -209,9 +213,9 @@
           angular.forEach(options.component, function(name) {
             var path;
             if (angular.isObject(name)) {
-              path = options.directory.modules + '/' + name.module + '/' + options.directory.components + '/' + lib.toCamelCase(name.name) + '.js';
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.components + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
             } else {
-              path = options.directory.vendors + '/' + options.directory.components + '/' + lib.toCamelCase(name) + '.js';
+              path = options.directory.vendors + '/' + options.directory.components + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
             }
             toLoad.push(path);
           });
@@ -220,9 +224,9 @@
           angular.forEach(options.directive, function(name) {
             var path;
             if (angular.isObject(name)) {
-              path = options.directory.modules + '/' + name.module + '/' + options.directory.directives + '/' + lib.toCamelCase(name.name) + '.js';
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.directives + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
             } else {
-              path = options.directory.vendors + '/' + options.directory.directives + '/' + lib.toCamelCase(name) + '.js';
+              path = options.directory.vendors + '/' + options.directory.directives + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
             }
             toLoad.push(path);
           });
@@ -231,9 +235,9 @@
           angular.forEach(options.service, function(name) {
             var path;
             if (angular.isObject(name)) {
-              path = options.directory.modules + '/' + name.module + '/' + options.directory.services + '/' + lib.toCamelCase(name.name) + '.js';
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.services + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
             } else {
-              path = options.directory.vendors + '/' + options.directory.services + '/' + lib.toCamelCase(name) + '.js';
+              path = options.directory.vendors + '/' + options.directory.services + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
             }
             toLoad.push(path);
           });
@@ -242,9 +246,9 @@
           angular.forEach(options.filter, function(name) {
             var path;
             if (angular.isObject(name)) {
-              path = options.directory.modules + '/' + name.module + '/' + options.directory.filters + '/' + lib.toCamelCase(name.name) + '.js';
+              path = options.directory.modules + '/' + name.module + '/' + options.directory.filters + '/' + lib.toCamelCase(name.name) + '.js' + lib.getVersionPrefix();
             } else {
-              path = options.directory.vendors + '/' + options.directory.filters + '/' + lib.toCamelCase(name) + '.js';
+              path = options.directory.vendors + '/' + options.directory.filters + '/' + lib.toCamelCase(name) + '.js' + lib.getVersionPrefix();
             }
             toLoad.push(path);
           });
@@ -279,7 +283,7 @@
                     return;
                   }
                   var controllerName = lib.toCamelCase(stateParams.controller),
-                  templateUrl = options.directory.modules + '/' + moduleName + '/' + options.directory.views + '/' + controllerName + '.html';
+                  templateUrl = options.directory.modules + '/' + moduleName + '/' + options.directory.views + '/' + controllerName + '.html' + lib.getVersionPrefix();
                   
                   if (stateParams.layout) {
                     var tmpUrl = templateUrl;
@@ -287,7 +291,7 @@
                       if (this.layout != undefined) {
                         var templateName = $rootElement.injector().invoke(this.layout);
                         if (templateName != undefined && templateName != '') {
-                          return this.options.directory.modules + '/' + this.moduleName + '/' + this.options.directory.views + '/' + this.controllerName + '/' + templateName + '.html';
+                          return this.options.directory.modules + '/' + this.moduleName + '/' + this.options.directory.views + '/' + this.controllerName + '/' + templateName + '.html' + lib.getVersionPrefix();
                         } else {
                           return this.templateUrl;
                         }
@@ -315,7 +319,7 @@
                     resolve: {
                       loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
                         var toLoad = angular.copy(toLoadState);
-                        toLoad.unshift(moduleDirectory + options.directory.controllers + '/' + controllerName + '.js');
+                        toLoad.unshift(moduleDirectory + options.directory.controllers + '/' + controllerName + '.js' + lib.getVersionPrefix());
                         return $ocLazyLoad.load(toLoad, toLoadConfigState);
                       }]
                     }
