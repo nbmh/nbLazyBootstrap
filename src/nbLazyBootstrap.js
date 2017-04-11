@@ -316,6 +316,7 @@
                     onExit: stateParams['onExit'] || angular.noop,
                     controller: moduleName + '.' + controllerName,
                     templateUrl: templateUrl,
+                    params: stateParams['params'] || {},
                     resolve: {
                       loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
                         var toLoad = angular.copy(toLoadState);
