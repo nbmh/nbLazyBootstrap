@@ -280,6 +280,10 @@
               if (config.state != undefined) {
                 angular.forEach(config.state, function(stateParams, stateName) {
                   if (stateName == 'otherwise') {
+                    if (!otherwiseSet) {
+                      otherwiseSet = true;
+                      $urlRouterProvider.otherwise(stateParams);
+                    }
                     return;
                   }
                   var controllerName = lib.toCamelCase(stateParams.controller),
@@ -325,17 +329,15 @@
                       }]
                     }
                   };
+                  
                   $stateProvider.state(stateName, newStateParams);
                 });
-              }
-              if (!otherwiseSet && config.otherwise != undefined) {
-                otherwiseSet = true;
-                $urlRouterProvider.otherwise(config.otherwise);
               }
             }
           });
 
           if (!otherwiseSet) {
+            console.log('otherwise default');
             $urlRouterProvider.otherwise('/');
           }
         }];
