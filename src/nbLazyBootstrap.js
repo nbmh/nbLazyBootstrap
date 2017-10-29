@@ -132,7 +132,6 @@
         appModules = [],
         moduleConfig = [],
         toLoad = [],
-        loaded = [],
         toLoadConfig = function(baseConfig, config) {
           return angular.merge(angular.copy(baseConfig), config);
         },
@@ -275,6 +274,7 @@
             if (config.state != undefined) {
               var moduleName = config.name.toLowerCase(),
               moduleDirectory = options.directory.modules + '/' + moduleName,
+              loaded = [],
               toLoadModule = toLoadCopy(moduleDirectory, toLoad, config),
               toLoadConfigModule = toLoadConfig(options.lazy, config.lazy || {});
 
