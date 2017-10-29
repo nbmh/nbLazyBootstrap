@@ -24,7 +24,7 @@
       reconfig: false,
       rerun: false,
       serie: false,
-      insertBefore: undefined
+      insertBefore: 'body>*:last-child'
     },
     directory: {
       modules: 'module',
@@ -132,6 +132,7 @@
         appModules = [],
         moduleConfig = [],
         toLoad = [],
+        loaded = [],
         toLoadConfig = function(baseConfig, config) {
           return angular.merge(angular.copy(baseConfig), config);
         },
@@ -273,7 +274,7 @@
             moduleConfig = angular.merge(moduleConfig, config);
             if (config.state != undefined) {
               var moduleName = config.name.toLowerCase(),
-              moduleDirectory = options.directory.modules + '/' + moduleName + '/',
+              moduleDirectory = options.directory.modules + '/' + moduleName,
               toLoadModule = toLoadCopy(moduleDirectory, toLoad, config),
               toLoadConfigModule = toLoadConfig(options.lazy, config.lazy || {});
 
@@ -323,9 +324,17 @@
                     params: stateParams['params'] || {},
                     resolve: {
                       loadMyCtrl: ['$ocLazyLoad', function($ocLazyLoad) {
-                        var toLoad = angular.copy(toLoadState);
-                        toLoad.unshift(moduleDirectory + options.directory.controllers + '/' + controllerName + '.js' + lib.getVersionPrefix());
-                        return $ocLazyLoad.load(toLoad, toLoadConfigState);
+                        var toLoadResolve = angular.copy(toLoadState);
+                        toLoadResolve.unshift(moduleDirectory + '/' + options.directory.controllers + '/' + controllerName + '.js' + lib.getVersionPrefix());
+                        angular.forEach(toLoadResolve, function(item, index) {
+                          var search = loaded.indexOf(item);
+                          if (search > -1) {
+                            toLoadResolve.splice(search, 1);
+                          } else {
+                            loaded.push(item);
+                          }
+                        });
+                        return $ocLazyLoad.load(toLoadResolve, toLoadConfigState);
                       }]
                     }
                   };
@@ -337,7 +346,6 @@
           });
 
           if (!otherwiseSet) {
-            console.log('otherwise default');
             $urlRouterProvider.otherwise('/');
           }
         }];
